@@ -41,8 +41,8 @@ public client_putinserver( id )
 
 public Message_SayText( msgId , msgDest , msgEnt ) 
 {
-	new Msg[192] szUserName[ 32 ], id = get_msg_arg_int( 1 );
-	get_msg_arg_string( 4 , Msg , charsmax( Msg ) ); 
+	new Msg[192], szUserName[ 32 ], id = get_msg_arg_int( 1 );
+	get_msg_arg_string( 4 , Msg , 191 ); 
 	
 
    	if( is_user_connected( id ) && !is_user_admin( id ) ) 
@@ -85,6 +85,14 @@ public Message_SayText( msgId , msgDest , msgEnt )
 	}
 }
 
-public KickIt( id )	server_cmd( "kick #%d %s" , get_user_userid( id ) );
+public KickIt( id )
+{
+	if( is_user_connected( id ) )	
+		server_cmd( "kick #%d %s" , get_user_userid( id ) );
+}
 
-public BanIt( id )	server_cmd( "ban #%d %i", get_user_userid( id ), str_to_num( get_pcvar_num( gBanTime ) ) );
+public BanIt( id )
+{
+	if( is_user_connected( id ) )
+		server_cmd( "ban #%d %i", get_user_userid( id ), get_pcvar_num( gBanTime ) );
+}
