@@ -1,13 +1,5 @@
-/*
-		To do:
-
-			- If user has print 3 times the same message, the four time will not show the default message just will show an HTML message and will automatcly BAN/kick him.
-			- Log file all the time a user repeat the same message.
-			- Disable the 'checking' if user is admin.
-			- Cvars for ban time.
-*/
-
 #include <amxmodx>
+#include <amxmisc>
 
 new const BlockMsg[]	=	"[ BMP ] **** Multiple Printed Text detected ****";
 
@@ -16,7 +8,9 @@ new const PLUGIN[]	=	"Block Multiple Prints",
 	  AUTHOR[]	=	"Craxor"
 
 new gLastUserMessage[33][192];
-new g_iPunishType, gUseLog, gBlockTimes, gBanTime;
+new gBlockTimes[32];
+
+new g_iPunishType, gUseLog, gBlockTimesCv, gBanTime;
 
 public plugin_init( )
 {
@@ -31,31 +25,53 @@ public plugin_init( )
 
 	g_iPunishType = register_cvar( "bmp_punish_type" , "1"  );
 	gUseLog = register_cvar( "bmp_use_log", "1" );
-	gBlockTimes = register_cvar( "bmp_maximum_blocks", "3" );
+	gBlockTimesCv = register_cvar( "bmp_maximum_blocks", "3" );
 	gBanTime = register_cvar( "bmp_bantime", "120" );
 }
 
 public client_putinserver( id ) 
 {
 	if( is_user_connected( id ) )
+	{
 		gLastUserMessage[id][0] = EOS;
+
+		gBlockTimes[ id ] = 0;
+	}
 }
 
 public Message_SayText( msgId , msgDest , msgEnt ) 
 {
-	new Msg[192], id = get_msg_arg_int( 1 );
+	new Msg[192] szUserName[ 32 ], id = get_msg_arg_int( 1 );
 	get_msg_arg_string( 4 , Msg , charsmax( Msg ) ); 
+	
 
    	if( is_user_connected( id ) && !is_user_admin( id ) ) 
     	{
-		if( equali( Msg, gLastUserMessage[id] ) )
+		if( equali( Msg, gLastUserMessage[id] ) && gBlockTimes[ id ] > get_pcvar_num( gBlockTimesCv ) )
 		{
 			switch( get_pcvar_num( g_iPunishType ) )
 			{
 				case 1: set_msg_arg_string( 2 , BlockMsg );
-				case 2: server_cmd( "kick #%d %s" , get_user_userid( id ) , BlockMsg );
+				case 2: 
+				{
+					set_task( 6.0, "KickIt", id );
+					show_motd( id, "You will be kicked in 5 seconds for spamming chat!" );
+				}
+
+				case 3:
+				{
+					set_task( 6.0, "BanIt", id );
+					show_motd( id, "You will be banned in 5 seconds for spamming chat!" );
+				}
+
 				default: set_msg_arg_string( 4 , Msg );
 			}
+
+			new szBuffer[ 64 ];
+			formatex( szBuffer, 63, "%s - %s ", szUserName, Msg);
+
+			if( get_pcvar_num( gUseLog ) > 0 )
+				log_to_file( "addons/amxmodx/configs/bmp.txt", szBuffer );
 		}
 		else
 		{
@@ -68,3 +84,7 @@ public Message_SayText( msgId , msgDest , msgEnt )
 		}
 	}
 }
+
+public KickIt( id )	server_cmd( "kick #%d %s" , get_user_userid( id ) );
+
+public BanIt( id )	server_cmd( "ban #%d %i", get_user_userid( id ), str_to_num( get_pcvar_num( gBanTime ) ) );
