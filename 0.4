@@ -1,0 +1,70 @@
+/*
+		To do:
+
+			- If user has print 3 times the same message, the four time will not show the default message just will show an HTML message and will automatcly BAN/kick him.
+			- Log file all the time a user repeat the same message.
+			- Disable the 'checking' if user is admin.
+			- Cvars for ban time.
+*/
+
+#include <amxmodx>
+
+new const BlockMsg[]	=	"[ BMP ] **** Multiple Printed Text detected ****";
+
+new const PLUGIN[]	=	"Block Multiple Prints",
+	 VERSION[]	=	"v0.4",
+	  AUTHOR[]	=	"Craxor"
+
+new gLastUserMessage[33][192];
+new g_iPunishType, gUseLog, gBlockTimes, gBanTime;
+
+public plugin_init( )
+{
+	register_plugin
+	(
+		.plugin_name	=	PLUGIN,
+		.version	=	VERSION,
+		.author		=	AUTHOR
+	);
+
+	register_message( get_user_msgid("SayText") , "Message_SayText" ); 
+
+	g_iPunishType = register_cvar( "bmp_punish_type" , "1"  );
+	gUseLog = register_cvar( "bmp_use_log", "1" );
+	gBlockTimes = register_cvar( "bmp_maximum_blocks", "3" );
+	gBanTime = register_cvar( "bmp_bantime", "120" );
+}
+
+public client_putinserver( id ) 
+{
+	if( is_user_connected( id ) )
+		gLastUserMessage[id][0] = EOS;
+}
+
+public Message_SayText( msgId , msgDest , msgEnt ) 
+{
+	new Msg[192], id = get_msg_arg_int( 1 );
+	get_msg_arg_string( 4 , Msg , charsmax( Msg ) ); 
+
+   	if( is_user_connected( id ) && !is_user_admin( id ) ) 
+    	{
+		if( equali( Msg, gLastUserMessage[id] ) )
+		{
+			switch( get_pcvar_num( g_iPunishType ) )
+			{
+				case 1: set_msg_arg_string( 2 , BlockMsg );
+				case 2: server_cmd( "kick #%d %s" , get_user_userid( id ) , BlockMsg );
+				default: set_msg_arg_string( 4 , Msg );
+			}
+		}
+		else
+		{
+			set_msg_arg_string( 4 , Msg );
+
+			if( Msg[0] != EOS ) 
+			{
+				copy( gLastUserMessage[id], charsmax( gLastUserMessage[] ), Msg );	
+			}
+		}
+	}
+}
